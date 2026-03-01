@@ -1,41 +1,32 @@
-# Build stage
-FROM python:3.9-slim as builder
+
+# Use Python 3.10 (required for cinemagoer)
+FROM python:3.10-slim-buster
 
 WORKDIR /app
 
-# Install build dependencies including git
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    ffmpeg \
     gcc \
     python3-dev \
-    git \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy requirements file
 COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
 
-# Final stage
-FROM python:3.9-slim
+# Install Python packages
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
 
-WORKDIR /app
-
-# Install runtime dependencies if needed
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /root/.local
-
-# Make sure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
-
-# Copy application
+# Copy the rest of the application
 COPY . .
 
-# Create directories
+# Create necessary directories
 RUN mkdir -p downloads logs
 
+# Set environment variables
 ENV PYTHONUNBUFFERED=1
 
+# Command to run the bot
 CMD ["python3", "bot.py"]
